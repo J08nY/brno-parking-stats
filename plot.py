@@ -3,8 +3,7 @@ from operator import itemgetter
 import click
 import csv
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import constants
 
@@ -18,7 +17,17 @@ def parse_row(row):
 def main(file):
     reader = csv.reader(file)
     head = next(reader)
-    rows = sorted(set(map(parse_row, reader)))
+    # Load
+    rows = list(map(parse_row, reader))
+
+    # Fix borked time
+    for i in range(len(rows) - 1):
+        td = rows[i + 1][0] - rows[i][0]
+        if td < timedelta():
+            rows[i] = (rows[i][0] - timedelta(days=1), *rows[i][1:])
+
+    # Deduplicate
+    rows = sorted(set(rows))
 
     # XXX Messy piece of terrible matplotlib follows XXX
 
@@ -40,6 +49,10 @@ def main(file):
     for i, id in enumerate(head[1:]):
         ax.step(list(map(itemgetter(0), rows)), list(map(lambda x: constants.pd_caps[id] - x[i + 1], rows)),
                 label=constants.pd_names[id])
+
+    ylim_1 = max(axs[0].get_ylim()[1], axs[1].get_ylim()[1])
+    axs[0].set_ylim((0, ylim_1))
+    axs[1].set_ylim((0, ylim_1))
 
     fig.legend(labs, loc="outside right upper")
 

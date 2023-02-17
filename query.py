@@ -1,6 +1,6 @@
 from operator import itemgetter
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import csv
 import requests
 import click
@@ -19,6 +19,11 @@ def main(file):
         raise ValueError("Oops")
     time = datetime.strptime(times.pop(), "%H:%M")
     timestamp = datetime.now().replace(hour=time.hour, minute=time.minute, second=0, microsecond=0)
+
+    # Prevent borked time, when it is just over midnight, yet API responds with 23:55 data that
+    # mistakenly get assigned to the next day.
+    if timestamp - datetime.now() > timedelta(days=1):
+        timestamp -= timedelta(days=1)
 
     writer = csv.writer(file)
 
